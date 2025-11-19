@@ -10,6 +10,7 @@ import (
 type Repository struct {
     Auth   AuthRepository
     Studio StudioRepository
+    Booking BookingRepository
 }
 
 type AuthRepository interface {
@@ -29,4 +30,18 @@ type StudioRepository interface {
     // Availability check
     FindBookingsByDateRange(studioID int, date time.Time) ([]database.Booking, error)
     IsStudioAvailable(studioID int, date time.Time, startTime, endTime time.Time) (bool, error)
+}
+
+type BookingRepository interface {
+    // Basic CRUD
+    Create(booking *database.Booking) error
+    FindByID(id int) (*database.Booking, error)
+    FindByIDWithRelations(id int) (*database.Booking, error)
+    FindAll(filter dto.BookingFilterRequest, userID *int) ([]database.Booking, int64, error)
+    Update(booking *database.Booking) error
+
+    // Business logic queries
+    FindByUserID(userID int, filter dto.BookingFilterRequest) ([]database.Booking, int64, error)
+    CountPendingBookings(userID int) (int64, error)
+    FindExpiredBookings() ([]database.Booking, error)
 }

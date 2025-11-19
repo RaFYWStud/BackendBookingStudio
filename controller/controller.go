@@ -27,6 +27,7 @@ func New(app *gin.Engine, service *contract.Service) {
 	allController := []Controller{
 		&AuthController{},
 		&StudioController{},
+		&BookingController{},
 		// Add your controller here
 	}
 
