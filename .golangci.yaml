@@ -1,0 +1,33 @@
+run:
+  timeout: 5m
+
+linters:
+  enable-all: false
+  enable:
+    - gofmt
+    - goimports
+    - revive
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - typecheck
+    - gocyclo
+    - ineffassign
+
+linters-settings:
+  revive:
+    rules:
+      - name: var-naming
+        # Daftar akronim yang diperlakukan sebagai satu kata (lihat CodebaseRule.md)
+        # Revive akan memastikan: exported => PascalCase, unexported => camelCase.
+        arguments:
+          - ["API", "HTTP", "ID", "JSON", "URL", "IP", "TCP", "TLS"]
+  gocyclo:
+    min-complexity: 15
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - funlen
