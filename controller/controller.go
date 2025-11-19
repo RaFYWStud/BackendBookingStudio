@@ -26,6 +26,7 @@ type Controller interface {
 func New(app *gin.Engine, service *contract.Service) {
 	allController := []Controller{
 		&AuthController{},
+		&StudioController{},
 		// Add your controller here
 	}
 
