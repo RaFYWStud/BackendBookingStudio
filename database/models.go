@@ -79,6 +79,10 @@ type Booking struct {
     RemainingAmount int           `gorm:"column:remaining_amount;not null"`
     DPDeadline      time.Time     `gorm:"column:dp_deadline;index"` // 24h after created
     Status          BookingStatus `gorm:"column:status;type:varchar(20);not null;default:'pending';index"`
+
+    Payments        []Payment      `gorm:"foreignKey:BookingID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+    Cancellation    *Cancellation  `gorm:"foreignKey:BookingID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
+
     CreatedAt       time.Time     `gorm:"column:created_at;autoCreateTime"`
     UpdatedAt       time.Time     `gorm:"column:updated_at;autoUpdateTime"`
 }

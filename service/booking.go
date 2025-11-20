@@ -348,7 +348,6 @@ func (s *bookingService) mapBookingToDTO(booking *database.Booking) dto.BookingD
 func (s *bookingService) mapBookingToDTOWithRelations(booking *database.Booking) dto.BookingData {
     data := s.mapBookingToDTO(booking)
 
-    // Add user if loaded
     if booking.User != nil {
         data.User = &dto.UserData{
             ID:    booking.User.ID,
@@ -358,8 +357,36 @@ func (s *bookingService) mapBookingToDTOWithRelations(booking *database.Booking)
         }
     }
 
-    // Add payments if loaded (implement later)
-    // Add cancellation if loaded (implement later)
+    if len(booking.Payments) > 0 {
+        data.Payments = make([]dto.PaymentData, len(booking.Payments))
+        for i, payment := range booking.Payments {
+            data.Payments[i] = dto.PaymentData{
+                ID:          payment.ID,
+                PaymentType: string(payment.PaymentType),
+                Amount:      payment.Amount,
+                Status:      string(payment.Status),
+            }
+            
+            if payment.ProofURL != "" {
+                data.Payments[i].ProofURL = payment.ProofURL
+            }
+            
+            if payment.PaidAt != nil {
+                data.Payments[i].PaidAt = payment.PaidAt.Format("2006-01-02 15:04:05")
+            }
+        }
+    }
+
+    if booking.Cancellation != nil {
+        data.Cancellation = &dto.CancellationData{
+            ID:           booking.Cancellation.ID,
+            BookingID:    booking.Cancellation.BookingID,
+            Reason:       booking.Cancellation.Reason,
+            RefundAmount: booking.Cancellation.RefundAmount,
+            RefundStatus: booking.Cancellation.RefundStatus,
+            CancelledAt:  booking.Cancellation.CancelledAt.Format("2006-01-02 15:04:05"),
+        }
+    }
 
     return data
 }
