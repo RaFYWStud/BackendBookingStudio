@@ -1,13 +1,17 @@
 package contract
 
-import "github.com/RaFYWStud/BackendBookingStudio/dto"
+import (
+	"github.com/RaFYWStud/BackendBookingStudio/database"
+	"github.com/RaFYWStud/BackendBookingStudio/dto"
+)
 
 type Service struct {
     Auth          AuthService
     Studio        StudioService
     Booking       BookingService
     PaymentMethod PaymentMethodService 
-    Payment       PaymentService       
+    Payment       PaymentService    
+    Email         EmailService   
 }
 
 type AuthService interface {
@@ -52,4 +56,12 @@ type PaymentService interface {
     GetAllPayments(filter dto.PaymentFilterRequest) (*dto.PaymentListResponse, error)
     GetPendingPayments(filter dto.PaymentFilterRequest) (*dto.PaymentListResponse, error)
     VerifyPayment(paymentID int, adminID int, req dto.VerifyPaymentRequest) (*dto.VerifyPaymentResponse, error)
+}
+
+type EmailService interface {
+    SendBookingCreated(booking *database.Booking) error              
+    SendBookingConfirmed(booking *database.Booking) error           
+    SendBookingCancelled(booking *database.Booking, reason string) error 
+    SendPaymentVerified(payment *database.Payment) error
+    SendPaymentRejected(payment *database.Payment, reason string) error        
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"time"
 
@@ -16,17 +17,20 @@ type paymentService struct {
     paymentRepo       contract.PaymentRepository
     bookingRepo       contract.BookingRepository
     paymentMethodRepo contract.PaymentMethodRepository
+    emailService      contract.EmailService
 }
 
 func ImplPaymentService(
     paymentRepo contract.PaymentRepository,
     bookingRepo contract.BookingRepository,
     paymentMethodRepo contract.PaymentMethodRepository,
+    emailService contract.EmailService,
 ) contract.PaymentService {
     return &paymentService{
         paymentRepo:       paymentRepo,
         bookingRepo:       bookingRepo,
         paymentMethodRepo: paymentMethodRepo,
+        emailService:      emailService,
     }
 }
 
@@ -73,7 +77,7 @@ func (s *paymentService) UploadPaymentProof(userID int, bookingID int, req dto.U
     expectedAmount := 0
     if req.PaymentType == "dp" {
         expectedAmount = booking.DPAmount
-        
+
         // Check DP deadline
         if time.Now().After(booking.DPDeadline) {
             return nil, errs.BadRequest("DP payment deadline has passed")
@@ -108,6 +112,7 @@ func (s *paymentService) UploadPaymentProof(userID int, bookingID int, req dto.U
     now := time.Now()
     payment := &database.Payment{
         BookingID:   bookingID,
+        // ⬅️ REMOVED: PaymentMethodID (field tidak ada di model)
         PaymentType: database.PaymentType(req.PaymentType),
         Amount:      req.Amount,
         ProofURL:    req.ProofURL,
@@ -299,6 +304,7 @@ func (s *paymentService) VerifyPayment(paymentID int, adminID int, req dto.Verif
 
     // 5. Update payment status
     now := time.Now()
+    previousStatus := payment.Status
     payment.Status = database.PaymentStatus(req.Status)
     payment.VerifiedBy = &adminID
     payment.VerifiedAt = &now
@@ -312,6 +318,7 @@ func (s *paymentService) VerifyPayment(paymentID int, adminID int, req dto.Verif
     }
 
     // 6. Update booking status based on payment verification
+    previousBookingStatus := booking.Status
     if req.Status == "verified" {
         if payment.PaymentType == "dp" {
             // DP verified → Booking confirmed
@@ -327,17 +334,50 @@ func (s *paymentService) VerifyPayment(paymentID int, adminID int, req dto.Verif
     }
 
     // 7. Reload payment with updated relations
-    payment, _ = s.paymentRepo.FindByIDWithRelations(paymentID)
+    paymentWithRelations, err := s.paymentRepo.FindByIDWithRelations(paymentID)
+    if err != nil {
+        log.Printf("⚠️  Failed to load payment relations for email: %v", err)
+    } else {
+        // ⬅️ SEND EMAIL: Based on payment verification result
+        go func() {
+            if paymentWithRelations.Booking == nil || paymentWithRelations.Booking.User == nil {
+                log.Printf("⚠️  Cannot send email: Booking or User data not loaded for payment #%d", paymentID)
+                return
+            }
 
-    message := fmt.Sprintf("Payment %s successfully", req.Status)
+            userEmail := paymentWithRelations.Booking.User.Email
+
+            if req.Status == "verified" {
+                // ⬅️ EMAIL: Payment Verified
+                if previousStatus == database.PaymentStatusPending {
+                    if err := s.emailService.SendPaymentVerified(paymentWithRelations); err != nil {
+                        log.Printf("❌ [Email] Failed to send payment verified email to %s: %v", userEmail, err)
+                    } else {
+                        log.Printf("✅ [Email] Payment verified email sent to %s (Payment #%d, Type: %s, Booking: %s → %s)",
+                            userEmail, paymentID, payment.PaymentType, previousBookingStatus, booking.Status)
+                    }
+                }
+            } else if req.Status == "rejected" {
+                // ⬅️ EMAIL: Payment Rejected
+                if err := s.emailService.SendPaymentRejected(paymentWithRelations, req.Reason); err != nil {
+                    log.Printf("❌ [Email] Failed to send payment rejected email to %s: %v", userEmail, err)
+                } else {
+                    log.Printf("✅ [Email] Payment rejected email sent to %s (Payment #%d, Reason: %s)",
+                        userEmail, paymentID, req.Reason)
+                }
+            }
+        }()
+    }
+
+    message := fmt.Sprintf("Payment %s successfully. Email notification sent to customer.", req.Status)
     if req.Status == "verified" {
-        message = fmt.Sprintf("Payment verified. Booking status updated to %s", booking.Status)
+        message = fmt.Sprintf("Payment verified. Booking status updated to %s. Email notification sent to customer.", booking.Status)
     }
 
     return &dto.VerifyPaymentResponse{
         Success: true,
         Message: message,
-        Data:    s.mapPaymentToDTO(payment),
+        Data:    s.mapPaymentToDTO(paymentWithRelations),
     }, nil
 }
 
@@ -386,7 +426,7 @@ func (s *paymentService) mapPaymentToDTO(payment *database.Payment) dto.PaymentD
         }
     }
 
-    // Add verified by info
+    // ⬅️ FIX: Gunakan VerifiedByUser (bukan Admin)
     if payment.VerifiedByUser != nil {
         data.VerifiedBy = &dto.UserData{
             ID:    payment.VerifiedByUser.ID,

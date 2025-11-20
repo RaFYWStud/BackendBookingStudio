@@ -65,27 +65,30 @@ const (
 
 // Booking model
 type Booking struct {
-    ID              int           `gorm:"column:id;primaryKey;autoIncrement;not null;<-:create"`
-    UserID          int           `gorm:"column:user_id;not null;index"`
-    User            *User         `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-    StudioID        int           `gorm:"column:studio_id;not null;index"`
-    Studio          *Studio       `gorm:"foreignKey:StudioID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-    BookingDate     time.Time     `gorm:"column:booking_date;type:date;not null;index"`
-    StartTime       time.Time     `gorm:"column:start_time;type:time;not null"`
-    EndTime         time.Time     `gorm:"column:end_time;type:time;not null"`
-    DurationHours   int           `gorm:"column:duration_hours;not null"`
-    TotalPrice      int           `gorm:"column:total_price;not null"`
-    DPAmount        int           `gorm:"column:dp_amount;not null"` // 30% of total
-    RemainingAmount int           `gorm:"column:remaining_amount;not null"`
-    DPDeadline      time.Time     `gorm:"column:dp_deadline;index"` // 24h after created
-    Status          BookingStatus `gorm:"column:status;type:varchar(20);not null;default:'pending';index"`
+    ID                 int             `gorm:"primaryKey;autoIncrement" json:"id"`
+    UserID             int             `gorm:"not null;index" json:"user_id"`
+    StudioID           int             `gorm:"not null;index" json:"studio_id"`
+    BookingDate        time.Time       `gorm:"type:date;not null;index" json:"booking_date"`
+    StartTime          time.Time       `gorm:"type:time;not null" json:"start_time"`
+    EndTime            time.Time       `gorm:"type:time;not null" json:"end_time"`
+    DurationHours      int             `gorm:"not null" json:"duration_hours"`
+    TotalPrice         int             `gorm:"not null" json:"total_price"`
+    DPAmount           int             `gorm:"not null" json:"dp_amount"`
+    RemainingAmount    int             `gorm:"not null" json:"remaining_amount"`
+    DPDeadline         time.Time       `gorm:"not null" json:"dp_deadline"`
+    Status             BookingStatus   `gorm:"type:varchar(20);not null;default:'pending';index" json:"status"`
+    CancelledAt        *time.Time      `gorm:"type:timestamp" json:"cancelled_at,omitempty"` // ⬅️ ADD
+    CancellationReason string          `gorm:"type:text" json:"cancellation_reason,omitempty"` // ⬅️ ADD
+    CreatedAt          time.Time       `gorm:"autoCreateTime" json:"created_at"`
+    UpdatedAt          time.Time       `gorm:"autoUpdateTime" json:"updated_at"`
 
-    Payments        []Payment      `gorm:"foreignKey:BookingID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-    Cancellation    *Cancellation  `gorm:"foreignKey:BookingID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
-
-    CreatedAt       time.Time     `gorm:"column:created_at;autoCreateTime"`
-    UpdatedAt       time.Time     `gorm:"column:updated_at;autoUpdateTime"`
+    // Relations
+    User         *User          `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"user,omitempty"`
+    Studio       *Studio        `gorm:"foreignKey:StudioID;constraint:OnDelete:CASCADE" json:"studio,omitempty"`
+    Payments     []Payment      `gorm:"foreignKey:BookingID" json:"payments,omitempty"`
+    Cancellation *Cancellation  `gorm:"foreignKey:BookingID" json:"cancellation,omitempty"`
 }
+
 
 // Add composite index for availability check
 func (Booking) TableName() string {
