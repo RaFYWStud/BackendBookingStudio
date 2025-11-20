@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/RaFYWStud/BackendBookingStudio/config"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config"
 )
 
 // jwtConfig holds the loaded JWT configuration and RSA keys used for signing and verifying tokens.

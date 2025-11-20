@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"github.com/unsrat-it-community/back-end-e-voting-2025/contract"
+	"github.com/RaFYWStud/BackendBookingStudio/contract"
 	"gorm.io/gorm"
 )
 
@@ -10,5 +10,7 @@ func New(db *gorm.DB) *contract.Repository {
 		Auth: ImplAuthRepository(db),
 		Studio: ImplStudioRepository(db),
 		Booking: ImplBookingRepository(db),
+		PaymentMethod: ImplPaymentMethodRepository(db), 
+        Payment:       ImplPaymentRepository(db),      
 	}
 }

@@ -6,8 +6,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/RaFYWStud/BackendBookingStudio/config/pkg/utils"
 	"github.com/joho/godotenv"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config/pkg/utils"
 )
 
 type AppConfigurationMap struct {

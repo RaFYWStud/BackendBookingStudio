@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config"
-	dbConfig "github.com/unsrat-it-community/back-end-e-voting-2025/config/database"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config/pkg/token"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config/server"
-	dbMigration "github.com/unsrat-it-community/back-end-e-voting-2025/database"
+	"github.com/RaFYWStud/BackendBookingStudio/config"
+	dbConfig "github.com/RaFYWStud/BackendBookingStudio/config/database"
+	"github.com/RaFYWStud/BackendBookingStudio/config/pkg/token"
+	"github.com/RaFYWStud/BackendBookingStudio/config/server"
+	dbMigration "github.com/RaFYWStud/BackendBookingStudio/database"
 )
 
 func main() {

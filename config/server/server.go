@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/RaFYWStud/BackendBookingStudio/config"
+	"github.com/RaFYWStud/BackendBookingStudio/config/database"
+	"github.com/RaFYWStud/BackendBookingStudio/config/middleware"
+	"github.com/RaFYWStud/BackendBookingStudio/controller"
 	"github.com/gin-gonic/gin"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config/database"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config/middleware"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/controller"
 
-	"github.com/unsrat-it-community/back-end-e-voting-2025/repository"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/service"
+	"github.com/RaFYWStud/BackendBookingStudio/repository"
+	"github.com/RaFYWStud/BackendBookingStudio/service"
 	"gorm.io/gorm"
 )
 

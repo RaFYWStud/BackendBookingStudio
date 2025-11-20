@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/RaFYWStud/BackendBookingStudio/config/pkg/errs"
 	"github.com/go-playground/validator/v10"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config/pkg/errs"
 )
 
 var validate *validator.Validate

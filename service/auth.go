@@ -3,12 +3,12 @@ package service
 import (
 	"time"
 
+	"github.com/RaFYWStud/BackendBookingStudio/config"
+	"github.com/RaFYWStud/BackendBookingStudio/config/pkg/errs"
+	"github.com/RaFYWStud/BackendBookingStudio/contract"
+	"github.com/RaFYWStud/BackendBookingStudio/database"
+	"github.com/RaFYWStud/BackendBookingStudio/dto"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config/pkg/errs"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/contract"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/database"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/dto"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )

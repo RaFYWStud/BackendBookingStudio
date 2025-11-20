@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"github.com/unsrat-it-community/back-end-e-voting-2025/contract"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/database"
+	"github.com/RaFYWStud/BackendBookingStudio/contract"
+	"github.com/RaFYWStud/BackendBookingStudio/database"
 	"gorm.io/gorm"
 )
 

@@ -1,4 +1,4 @@
-module github.com/unsrat-it-community/back-end-e-voting-2025
+module github.com/RaFYWStud/BackendBookingStudio
 
 go 1.23.3
 

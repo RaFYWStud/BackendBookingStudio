@@ -3,11 +3,11 @@ package controller
 import (
 	"net/http"
 
+	"github.com/RaFYWStud/BackendBookingStudio/config/middleware"
+	"github.com/RaFYWStud/BackendBookingStudio/config/pkg/errs"
+	"github.com/RaFYWStud/BackendBookingStudio/contract"
+	"github.com/RaFYWStud/BackendBookingStudio/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config/middleware"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config/pkg/errs"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/contract"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/dto"
 )
 
 type AuthController struct {

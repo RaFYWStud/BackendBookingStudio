@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config"
+	"github.com/RaFYWStud/BackendBookingStudio/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

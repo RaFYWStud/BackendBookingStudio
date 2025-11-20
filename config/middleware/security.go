@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/RaFYWStud/BackendBookingStudio/config/pkg/errs"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/unsrat-it-community/back-end-e-voting-2025/config/pkg/errs"
 )
 
 // Auth middleware validates JWT token
