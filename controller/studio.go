@@ -35,6 +35,7 @@ func (sc *StudioController) InitRoute(app *gin.RouterGroup) {
     {
         admin.POST("", sc.createStudio)
         admin.PUT("/:id", sc.updateStudio)
+        admin.PATCH("/:id", sc.patchStudio)
         admin.DELETE("/:id", sc.deleteStudio)
     }
 }
@@ -132,6 +133,30 @@ func (sc *StudioController) updateStudio(ctx *gin.Context) {
     }
 
     response, err := sc.service.UpdateStudio(studioID, payload)
+    if err != nil {
+        HandlerError(ctx, err)
+        return
+    }
+
+    ctx.JSON(http.StatusOK, response)
+}
+
+// PatchStudio - PATCH /studios/:id (Admin Only)
+func (sc *StudioController) patchStudio(ctx *gin.Context) {
+    idParam := ctx.Param("id")
+    studioID, err := strconv.Atoi(idParam)
+    if err != nil {
+        HandlerError(ctx, errs.BadRequest("invalid studio ID"))
+        return
+    }
+
+    var payload dto.PatchStudioRequest
+    if err := ctx.ShouldBindJSON(&payload); err != nil {
+        HandlerError(ctx, errs.BadRequest("invalid request payload"))
+        return
+    }
+
+    response, err := sc.service.PatchStudio(studioID, payload)
     if err != nil {
         HandlerError(ctx, err)
         return

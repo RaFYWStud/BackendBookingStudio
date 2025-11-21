@@ -31,7 +31,7 @@ func ImplBookingService(
     }
 }
 
-// CreateBooking - Customer create new booking
+// CreateBooking - Customer create new booking (with auto-calculate duration)
 func (s *bookingService) CreateBooking(userID int, req dto.CreateBookingRequest) (*dto.CreateBookingResponse, error) {
     // 1. Verify studio exists and active
     studio, err := s.studioRepo.FindByID(req.StudioID)
@@ -70,13 +70,17 @@ func (s *bookingService) CreateBooking(userID int, req dto.CreateBookingRequest)
         return nil, errs.BadRequest("end_time must be after start_time")
     }
 
-    // 3. Validate duration matches request
-    calculatedDuration := int(endTime.Sub(startTime).Hours())
-    if calculatedDuration != req.DurationHours {
-        return nil, errs.BadRequest(fmt.Sprintf("duration mismatch: calculated %d hours, but requested %d hours", calculatedDuration, req.DurationHours))
+    // 3. AUTO-CALCULATE duration_hours
+    duration := endTime.Sub(startTime)
+    durationHours := int(math.Ceil(duration.Hours()))
+
+    // Jika user kirim duration_hours, validasi apakah sesuai
+    if req.DurationHours > 0 && req.DurationHours != durationHours {
+        log.Printf("⚠️  Duration mismatch: calculated=%d, requested=%d. Using calculated value.", durationHours, req.DurationHours)
+        // Tetap gunakan calculated value untuk konsistensi
     }
 
-    if calculatedDuration < 1 {
+    if durationHours < 1 {
         return nil, errs.BadRequest("minimum booking duration is 1 hour")
     }
 
@@ -90,8 +94,8 @@ func (s *bookingService) CreateBooking(userID int, req dto.CreateBookingRequest)
         return nil, errs.BadRequest("studio is not available for the selected time slot")
     }
 
-    // 5. Calculate total price
-    totalPrice := req.DurationHours * studio.PricePerHour
+    // 5. Calculate total price (using auto-calculated duration)
+    totalPrice := durationHours * studio.PricePerHour
 
     // 6. Create booking - status: pending (menunggu pembayaran manual via WhatsApp)
     booking := &database.Booking{
@@ -100,7 +104,7 @@ func (s *bookingService) CreateBooking(userID int, req dto.CreateBookingRequest)
         BookingDate:   bookingDate,
         StartTime:     startTime,
         EndTime:       endTime,
-        DurationHours: req.DurationHours,
+        DurationHours: durationHours, // ✅ Use auto-calculated duration
         TotalPrice:    totalPrice,
         Status:        database.BookingStatusPending,
     }
@@ -126,7 +130,15 @@ func (s *bookingService) CreateBooking(userID int, req dto.CreateBookingRequest)
         }
     }()
 
-    message := fmt.Sprintf("Booking berhasil dibuat. Total pembayaran: Rp %s. Silakan hubungi admin via WhatsApp untuk instruksi pembayaran.", formatRupiah(totalPrice))
+    adminWhatsApp := getEnv("ADMIN_WHATSAPP_DISPLAY", "0895-7060-8111")
+
+    message := fmt.Sprintf(
+        "Booking berhasil dibuat. Total pembayaran: Rp %s.\n\n"+
+            "📱 Silakan hubungi admin untuk pembayaran:\n"+
+            "WhatsApp: %s",
+        formatRupiah(totalPrice),
+        adminWhatsApp,
+    )
 
     return &dto.CreateBookingResponse{
         Success: true,
@@ -138,14 +150,11 @@ func (s *bookingService) CreateBooking(userID int, req dto.CreateBookingRequest)
 // GetMyBookings - Customer get their bookings
 func (s *bookingService) GetMyBookings(userID int, filter dto.BookingFilterRequest) (*dto.BookingListResponse, error) {
     // Set default pagination
-    if filter.Page <= 0 {
+    if filter.Page < 1 {
         filter.Page = 1
     }
-    if filter.Limit <= 0 {
+    if filter.Limit < 1 {
         filter.Limit = 10
-    }
-    if filter.Limit > 100 {
-        filter.Limit = 100
     }
 
     bookings, total, err := s.bookingRepo.FindByUserID(userID, filter)
@@ -153,16 +162,16 @@ func (s *bookingService) GetMyBookings(userID int, filter dto.BookingFilterReque
         return nil, errs.InternalServerError("failed to fetch bookings")
     }
 
-    bookingDataList := make([]dto.BookingData, len(bookings))
+    bookingDTOs := make([]dto.BookingData, len(bookings))
     for i, booking := range bookings {
-        bookingDataList[i] = s.mapBookingToDTO(&booking)
+        bookingDTOs[i] = s.mapBookingToDTO(&booking)
     }
 
     totalPages := int(math.Ceil(float64(total) / float64(filter.Limit)))
 
     return &dto.BookingListResponse{
         Success: true,
-        Data:    bookingDataList,
+        Data:    bookingDTOs,
         Meta: dto.PaginationMeta{
             CurrentPage: filter.Page,
             PerPage:     filter.Limit,
@@ -196,14 +205,11 @@ func (s *bookingService) GetBookingDetail(bookingID int, userID int, isAdmin boo
 // GetAllBookings - Admin get all bookings
 func (s *bookingService) GetAllBookings(filter dto.BookingFilterRequest) (*dto.BookingListResponse, error) {
     // Set default pagination
-    if filter.Page <= 0 {
+    if filter.Page < 1 {
         filter.Page = 1
     }
-    if filter.Limit <= 0 {
+    if filter.Limit < 1 {
         filter.Limit = 10
-    }
-    if filter.Limit > 100 {
-        filter.Limit = 100
     }
 
     bookings, total, err := s.bookingRepo.FindAll(filter, nil)
@@ -211,16 +217,16 @@ func (s *bookingService) GetAllBookings(filter dto.BookingFilterRequest) (*dto.B
         return nil, errs.InternalServerError("failed to fetch bookings")
     }
 
-    bookingDataList := make([]dto.BookingData, len(bookings))
+    bookingDTOs := make([]dto.BookingData, len(bookings))
     for i, booking := range bookings {
-        bookingDataList[i] = s.mapBookingToDTOWithRelations(&booking)
+        bookingDTOs[i] = s.mapBookingToDTOWithRelations(&booking)
     }
 
     totalPages := int(math.Ceil(float64(total) / float64(filter.Limit)))
 
     return &dto.BookingListResponse{
         Success: true,
-        Data:    bookingDataList,
+        Data:    bookingDTOs,
         Meta: dto.PaginationMeta{
             CurrentPage: filter.Page,
             PerPage:     filter.Limit,
@@ -240,24 +246,24 @@ func (s *bookingService) UpdateBookingStatus(bookingID int, req dto.UpdateBookin
         return nil, errs.InternalServerError("failed to fetch booking")
     }
 
-    // Validate status
-    validStatuses := []string{"pending", "confirmed", "completed", "cancelled"}
-    isValid := false
-    for _, status := range validStatuses {
-        if req.Status == status {
-            isValid = true
-            break
-        }
+    // Validate status transition
+    oldStatus := booking.Status
+    newStatus := database.BookingStatus(req.Status)
+
+    if oldStatus == newStatus {
+        return nil, errs.BadRequest(fmt.Sprintf("booking is already %s", newStatus))
     }
 
-    if !isValid {
-        return nil, errs.BadRequest("invalid status. Valid statuses: pending, confirmed, completed, cancelled")
+    if oldStatus == database.BookingStatusCompleted {
+        return nil, errs.BadRequest("cannot change status of completed booking")
     }
 
-    previousStatus := booking.Status
-    booking.Status = database.BookingStatus(req.Status)
+    if oldStatus == database.BookingStatusCancelled && newStatus != database.BookingStatusPending {
+        return nil, errs.BadRequest("can only reopen cancelled booking to pending status")
+    }
 
-    // Update admin notes if provided
+    // Update booking
+    booking.Status = newStatus
     if req.AdminNotes != "" {
         booking.AdminNotes = req.AdminNotes
     }
@@ -270,60 +276,30 @@ func (s *bookingService) UpdateBookingStatus(bookingID int, req dto.UpdateBookin
     bookingWithRelations, err := s.bookingRepo.FindByIDWithRelations(bookingID)
     if err != nil {
         log.Printf("⚠️  Failed to reload booking: %v", err)
-        bookingWithRelations = booking
     }
 
-    // Send email notification based on status change
+    // Send email notification based on status
     go func() {
-        if bookingWithRelations.User == nil {
-            log.Printf("⚠️  Cannot send email: User data not loaded for booking #%d", bookingID)
-            return
-        }
-
-        userEmail := bookingWithRelations.User.Email
-
-        switch req.Status {
-        case "confirmed":
-            // Admin confirmed payment received
-            if previousStatus != database.BookingStatusConfirmed {
-                if err := s.emailService.SendBookingConfirmed(bookingWithRelations); err != nil {
-                    log.Printf("❌ [Email] Failed to send booking confirmed email to %s: %v", userEmail, err)
-                } else {
-                    log.Printf("✅ [Email] Booking confirmed email sent to %s (Booking #%d)", userEmail, bookingID)
-                }
-            }
-
-        case "cancelled":
-            // Admin cancelled booking
+        var emailErr error
+        switch newStatus {
+        case database.BookingStatusConfirmed:
+            emailErr = s.emailService.SendBookingConfirmed(bookingWithRelations)
+        case database.BookingStatusCancelled:
             reason := req.AdminNotes
             if reason == "" {
-                reason = "Booking cancelled by admin"
+                reason = "Cancelled by admin"
             }
-            if err := s.emailService.SendBookingCancelled(bookingWithRelations, reason); err != nil {
-                log.Printf("❌ [Email] Failed to send cancellation email to %s: %v", userEmail, err)
-            } else {
-                log.Printf("✅ [Email] Cancellation email sent to %s (Booking #%d)", userEmail, bookingID)
-            }
+            emailErr = s.emailService.SendBookingCancelled(bookingWithRelations, reason)
+        }
 
-        case "completed":
-            log.Printf("ℹ️  Booking #%d marked as completed", bookingID)
-
-        default:
-            log.Printf("ℹ️  Status updated to %s for booking #%d", req.Status, bookingID)
+        if emailErr != nil {
+            log.Printf("❌ [Email] Failed to send status update email: %v", emailErr)
+        } else {
+            log.Printf("✅ [Email] Status update email sent for Booking #%d (status: %s)", bookingID, newStatus)
         }
     }()
 
-    var message string
-    switch req.Status {
-    case "confirmed":
-        message = "Booking status updated to confirmed. Customer has been notified via email."
-    case "completed":
-        message = "Booking marked as completed."
-    case "cancelled":
-        message = "Booking cancelled. Customer has been notified via email."
-    default:
-        message = fmt.Sprintf("Booking status updated to %s.", req.Status)
-    }
+    message := fmt.Sprintf("Booking status updated to %s. Customer has been notified via email.", newStatus)
 
     return &dto.UpdateBookingStatusResponse{
         Success: true,

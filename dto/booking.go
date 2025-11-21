@@ -7,7 +7,7 @@ type CreateBookingRequest struct {
     BookingDate   string `json:"booking_date" binding:"required"` // YYYY-MM-DD
     StartTime     string `json:"start_time" binding:"required"`   // HH:MM
     EndTime       string `json:"end_time" binding:"required"`     // HH:MM
-    DurationHours int    `json:"duration_hours" binding:"required,min=1"`
+    DurationHours int    `json:"duration_hours,omitempty"`
 }
 
 type UpdateBookingStatusRequest struct {

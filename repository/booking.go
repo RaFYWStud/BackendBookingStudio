@@ -34,8 +34,6 @@ func (r *bookingRepository) FindByIDWithRelations(id int) (*database.Booking, er
     var booking database.Booking
     err := r.db.Preload("User").
         Preload("Studio").
-        Preload("Payments").
-        Preload("Cancellation").
         First(&booking, id).Error
     if err != nil {
         return nil, err
