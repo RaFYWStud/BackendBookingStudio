@@ -24,6 +24,7 @@ type StudioService interface {
     CheckAvailability(studioID int, req dto.CheckAvailabilityRequest) (*dto.AvailabilityResponse, error)
     CreateStudio(req dto.CreateStudioRequest) (*dto.CreateStudioResponse, error)
     UpdateStudio(studioID int, req dto.UpdateStudioRequest) (*dto.UpdateStudioResponse, error)
+    PatchStudio(studioID int, req dto.PatchStudioRequest) (*dto.PatchStudioResponse, error)
     DeleteStudio(studioID int) (*dto.DeleteStudioResponse, error)
 }
 
@@ -39,7 +40,5 @@ type BookingService interface {
 type EmailService interface {
     SendBookingCreated(booking *database.Booking) error              
     SendBookingConfirmed(booking *database.Booking) error           
-    SendBookingCancelled(booking *database.Booking, reason string) error 
-    SendPaymentVerified(payment *database.Payment) error
-    SendPaymentRejected(payment *database.Payment, reason string) error        
+    SendBookingCancelled(booking *database.Booking, reason string) error     
 }

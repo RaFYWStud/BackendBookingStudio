@@ -70,7 +70,17 @@ func (s *bookingService) CreateBooking(userID int, req dto.CreateBookingRequest)
         return nil, errs.BadRequest("end_time must be after start_time")
     }
 
-    // 3. Check studio availability
+    // 3. Validate duration matches request
+    calculatedDuration := int(endTime.Sub(startTime).Hours())
+    if calculatedDuration != req.DurationHours {
+        return nil, errs.BadRequest(fmt.Sprintf("duration mismatch: calculated %d hours, but requested %d hours", calculatedDuration, req.DurationHours))
+    }
+
+    if calculatedDuration < 1 {
+        return nil, errs.BadRequest("minimum booking duration is 1 hour")
+    }
+
+    // 4. Check studio availability
     isAvailable, err := s.studioRepo.IsStudioAvailable(req.StudioID, bookingDate, startTime, endTime)
     if err != nil {
         return nil, errs.InternalServerError("failed to check availability")
@@ -80,65 +90,54 @@ func (s *bookingService) CreateBooking(userID int, req dto.CreateBookingRequest)
         return nil, errs.BadRequest("studio is not available for the selected time slot")
     }
 
-    // 4. Calculate duration, price, and DP
-    duration := int(endTime.Sub(startTime).Hours())
-    if duration < 1 {
-        return nil, errs.BadRequest("minimum booking duration is 1 hour")
-    }
+    // 5. Calculate total price
+    totalPrice := req.DurationHours * studio.PricePerHour
 
-    totalPrice := duration * studio.PricePerHour
-    dpAmount := int(float64(totalPrice) * 0.3)
-    remainingAmount := totalPrice - dpAmount
-
-    // 5. Set DP deadline (24 hours from now)
-    dpDeadline := time.Now().Add(24 * time.Hour)
-
-    // 6. Create booking
+    // 6. Create booking - status: pending (menunggu pembayaran manual via WhatsApp)
     booking := &database.Booking{
-        UserID:          userID,
-        StudioID:        req.StudioID,
-        BookingDate:     bookingDate,
-        StartTime:       startTime,
-        EndTime:         endTime,
-        DurationHours:   duration,
-        TotalPrice:      totalPrice,
-        DPAmount:        dpAmount,
-        RemainingAmount: remainingAmount,
-        DPDeadline:      dpDeadline,
-        Status:          database.BookingStatusPending,
+        UserID:        userID,
+        StudioID:      req.StudioID,
+        BookingDate:   bookingDate,
+        StartTime:     startTime,
+        EndTime:       endTime,
+        DurationHours: req.DurationHours,
+        TotalPrice:    totalPrice,
+        Status:        database.BookingStatusPending,
     }
 
     if err := s.bookingRepo.Create(booking); err != nil {
         return nil, errs.InternalServerError("failed to create booking")
     }
 
-    booking.Studio = studio
-
-    // ⬅️ SEND EMAIL: Booking Created (status: pending)
+    // 7. Load booking with relations for email
     bookingWithRelations, err := s.bookingRepo.FindByIDWithRelations(booking.ID)
     if err != nil {
         log.Printf("⚠️  Failed to load booking relations for email: %v", err)
-    } else {
-        go func() {
-            if err := s.emailService.SendBookingCreated(bookingWithRelations); err != nil {
-                log.Printf("❌ [Email] Failed to send booking created email to %s: %v",
-                    bookingWithRelations.User.Email, err)
-            } else {
-                log.Printf("✅ [Email] Booking created email sent to %s (Booking #%d)",
-                    bookingWithRelations.User.Email, bookingWithRelations.ID)
-            }
-        }()
+        bookingWithRelations = booking
+        bookingWithRelations.Studio = studio
     }
+
+    // 8. Send email notification
+    go func() {
+        if err := s.emailService.SendBookingCreated(bookingWithRelations); err != nil {
+            log.Printf("❌ [Email] Failed to send booking created email: %v", err)
+        } else {
+            log.Printf("✅ [Email] Booking created email sent for Booking #%d", booking.ID)
+        }
+    }()
+
+    message := fmt.Sprintf("Booking berhasil dibuat. Total pembayaran: Rp %s. Silakan hubungi admin via WhatsApp untuk instruksi pembayaran.", formatRupiah(totalPrice))
 
     return &dto.CreateBookingResponse{
         Success: true,
-        Message: "Booking created successfully. Please check your email for payment instructions.",
-        Data:    s.mapBookingToDTO(booking),
+        Message: message,
+        Data:    s.mapBookingToDTO(bookingWithRelations),
     }, nil
 }
 
 // GetMyBookings - Customer get their bookings
 func (s *bookingService) GetMyBookings(userID int, filter dto.BookingFilterRequest) (*dto.BookingListResponse, error) {
+    // Set default pagination
     if filter.Page <= 0 {
         filter.Page = 1
     }
@@ -164,11 +163,11 @@ func (s *bookingService) GetMyBookings(userID int, filter dto.BookingFilterReque
     return &dto.BookingListResponse{
         Success: true,
         Data:    bookingDataList,
-        Pagination: dto.Pagination{
-            CurrentPage:  filter.Page,
-            PageSize:     filter.Limit,
-            TotalPages:   totalPages,
-            TotalRecords: total,
+        Meta: dto.PaginationMeta{
+            CurrentPage: filter.Page,
+            PerPage:     filter.Limit,
+            Total:       total,
+            TotalPages:  totalPages,
         },
     }, nil
 }
@@ -183,6 +182,7 @@ func (s *bookingService) GetBookingDetail(bookingID int, userID int, isAdmin boo
         return nil, errs.InternalServerError("failed to fetch booking details")
     }
 
+    // Authorization check
     if !isAdmin && booking.UserID != userID {
         return nil, errs.Forbidden("you don't have access to this booking")
     }
@@ -193,83 +193,9 @@ func (s *bookingService) GetBookingDetail(bookingID int, userID int, isAdmin boo
     }, nil
 }
 
-// CancelBooking - Customer cancel booking
-func (s *bookingService) CancelBooking(bookingID int, userID int, req dto.CancelBookingRequest) (*dto.CancelBookingResponse, error) {
-    booking, err := s.bookingRepo.FindByID(bookingID)
-    if err != nil {
-        if err == gorm.ErrRecordNotFound {
-            return nil, errs.NotFound("booking not found")
-        }
-        return nil, errs.InternalServerError("failed to fetch booking")
-    }
-
-    if booking.UserID != userID {
-        return nil, errs.Forbidden("you can only cancel your own bookings")
-    }
-
-    if booking.Status == database.BookingStatusCancelled {
-        return nil, errs.BadRequest("booking is already cancelled")
-    }
-
-    if booking.Status == database.BookingStatusCompleted {
-        return nil, errs.BadRequest("cannot cancel completed booking")
-    }
-
-    // Calculate refund
-    refundAmount := 0
-    if booking.Status == database.BookingStatusPaid {
-        refundAmount = int(float64(booking.TotalPrice) * 0.7) // 70% refund
-    }
-
-    // Update booking status
-    now := time.Now()
-    booking.Status = database.BookingStatusCancelled
-    booking.CancelledAt = &now
-    booking.CancellationReason = req.Reason
-
-    if err := s.bookingRepo.Update(booking); err != nil {
-        return nil, errs.InternalServerError("failed to cancel booking")
-    }
-
-    cancellation := &database.Cancellation{
-        BookingID:    bookingID,
-        Reason:       req.Reason,
-        RefundAmount: refundAmount,
-        RefundStatus: "pending",
-        CancelledAt:  time.Now(),
-    }
-
-    // ⬅️ SEND EMAIL: Booking Cancelled by Customer
-    bookingWithRelations, err := s.bookingRepo.FindByIDWithRelations(bookingID)
-    if err != nil {
-        log.Printf("⚠️  Failed to load booking relations for email: %v", err)
-    } else {
-        go func() {
-            if err := s.emailService.SendBookingCancelled(bookingWithRelations, req.Reason); err != nil {
-                log.Printf("❌ [Email] Failed to send cancellation email to %s: %v",
-                    bookingWithRelations.User.Email, err)
-            } else {
-                log.Printf("✅ [Email] Cancellation email sent to %s (Booking #%d)",
-                    bookingWithRelations.User.Email, bookingID)
-            }
-        }()
-    }
-
-    return &dto.CancelBookingResponse{
-        Success: true,
-        Message: "Booking cancelled successfully. Email notification sent.",
-        Data: dto.CancellationData{
-            BookingID:    cancellation.BookingID,
-            Reason:       cancellation.Reason,
-            RefundAmount: cancellation.RefundAmount,
-            RefundStatus: cancellation.RefundStatus,
-            CancelledAt:  cancellation.CancelledAt.Format("2006-01-02 15:04:05"),
-        },
-    }, nil
-}
-
 // GetAllBookings - Admin get all bookings
 func (s *bookingService) GetAllBookings(filter dto.BookingFilterRequest) (*dto.BookingListResponse, error) {
+    // Set default pagination
     if filter.Page <= 0 {
         filter.Page = 1
     }
@@ -295,11 +221,11 @@ func (s *bookingService) GetAllBookings(filter dto.BookingFilterRequest) (*dto.B
     return &dto.BookingListResponse{
         Success: true,
         Data:    bookingDataList,
-        Pagination: dto.Pagination{
-            CurrentPage:  filter.Page,
-            PageSize:     filter.Limit,
-            TotalPages:   totalPages,
-            TotalRecords: total,
+        Meta: dto.PaginationMeta{
+            CurrentPage: filter.Page,
+            PerPage:     filter.Limit,
+            Total:       total,
+            TotalPages:  totalPages,
         },
     }, nil
 }
@@ -314,7 +240,8 @@ func (s *bookingService) UpdateBookingStatus(bookingID int, req dto.UpdateBookin
         return nil, errs.InternalServerError("failed to fetch booking")
     }
 
-    validStatuses := []string{"confirmed", "completed", "cancelled"}
+    // Validate status
+    validStatuses := []string{"pending", "confirmed", "completed", "cancelled"}
     isValid := false
     for _, status := range validStatuses {
         if req.Status == status {
@@ -324,29 +251,29 @@ func (s *bookingService) UpdateBookingStatus(bookingID int, req dto.UpdateBookin
     }
 
     if !isValid {
-        return nil, errs.BadRequest("invalid status. Valid statuses: confirmed, completed, cancelled")
+        return nil, errs.BadRequest("invalid status. Valid statuses: pending, confirmed, completed, cancelled")
     }
 
     previousStatus := booking.Status
     booking.Status = database.BookingStatus(req.Status)
 
-    if req.Status == "cancelled" {
-        now := time.Now()
-        booking.CancelledAt = &now
-        if req.Reason != "" {
-            booking.CancellationReason = req.Reason
-        } else {
-            booking.CancellationReason = "Cancelled by admin"
-        }
+    // Update admin notes if provided
+    if req.AdminNotes != "" {
+        booking.AdminNotes = req.AdminNotes
     }
 
     if err := s.bookingRepo.Update(booking); err != nil {
         return nil, errs.InternalServerError("failed to update booking status")
     }
 
-    bookingWithRelations, _ := s.bookingRepo.FindByIDWithRelations(bookingID)
+    // Reload with relations
+    bookingWithRelations, err := s.bookingRepo.FindByIDWithRelations(bookingID)
+    if err != nil {
+        log.Printf("⚠️  Failed to reload booking: %v", err)
+        bookingWithRelations = booking
+    }
 
-    // ⬅️ SEND EMAIL: Based on status change
+    // Send email notification based on status change
     go func() {
         if bookingWithRelations.User == nil {
             log.Printf("⚠️  Cannot send email: User data not loaded for booking #%d", bookingID)
@@ -357,7 +284,7 @@ func (s *bookingService) UpdateBookingStatus(bookingID int, req dto.UpdateBookin
 
         switch req.Status {
         case "confirmed":
-            // Status changed: pending/paid -> confirmed
+            // Admin confirmed payment received
             if previousStatus != database.BookingStatusConfirmed {
                 if err := s.emailService.SendBookingConfirmed(bookingWithRelations); err != nil {
                     log.Printf("❌ [Email] Failed to send booking confirmed email to %s: %v", userEmail, err)
@@ -367,54 +294,117 @@ func (s *bookingService) UpdateBookingStatus(bookingID int, req dto.UpdateBookin
             }
 
         case "cancelled":
-            // Status changed: any -> cancelled (by admin)
-            reason := req.Reason
+            // Admin cancelled booking
+            reason := req.AdminNotes
             if reason == "" {
-                reason = "Cancelled by admin"
+                reason = "Booking cancelled by admin"
             }
             if err := s.emailService.SendBookingCancelled(bookingWithRelations, reason); err != nil {
-                log.Printf("❌ [Email] Failed to send admin cancellation email to %s: %v", userEmail, err)
+                log.Printf("❌ [Email] Failed to send cancellation email to %s: %v", userEmail, err)
             } else {
-                log.Printf("✅ [Email] Admin cancellation email sent to %s (Booking #%d, Reason: %s)",
-                    userEmail, bookingID, reason)
+                log.Printf("✅ [Email] Cancellation email sent to %s (Booking #%d)", userEmail, bookingID)
             }
 
         case "completed":
-            // Status changed: confirmed/paid -> completed
-            log.Printf("ℹ️  [Email] Booking #%d marked as completed. No email configured.", bookingID)
-            // Optional: Bisa tambahkan SendBookingCompleted di email service
+            log.Printf("ℹ️  Booking #%d marked as completed", bookingID)
 
         default:
-            log.Printf("⚠️  [Email] No notification configured for status: %s", req.Status)
+            log.Printf("ℹ️  Status updated to %s for booking #%d", req.Status, bookingID)
         }
     }()
 
+    var message string
+    switch req.Status {
+    case "confirmed":
+        message = "Booking status updated to confirmed. Customer has been notified via email."
+    case "completed":
+        message = "Booking marked as completed."
+    case "cancelled":
+        message = "Booking cancelled. Customer has been notified via email."
+    default:
+        message = fmt.Sprintf("Booking status updated to %s.", req.Status)
+    }
+
     return &dto.UpdateBookingStatusResponse{
         Success: true,
-        Message: fmt.Sprintf("Booking status updated to %s successfully. Email notification sent to customer.", req.Status),
+        Message: message,
         Data:    s.mapBookingToDTOWithRelations(bookingWithRelations),
     }, nil
 }
 
-// Helper: Map booking to DTO (basic)
-func (s *bookingService) mapBookingToDTO(booking *database.Booking) dto.BookingData {
-    data := dto.BookingData{
-        ID:              booking.ID,
-        UserID:          booking.UserID,
-        StudioID:        booking.StudioID,
-        BookingDate:     booking.BookingDate.Format("2006-01-02"),
-        StartTime:       booking.StartTime.Format("15:04"),
-        EndTime:         booking.EndTime.Format("15:04"),
-        DurationHours:   booking.DurationHours,
-        TotalPrice:      booking.TotalPrice,
-        DPAmount:        booking.DPAmount,
-        RemainingAmount: booking.RemainingAmount,
-        DPDeadline:      booking.DPDeadline.Format("2006-01-02 15:04:05"),
-        Status:          string(booking.Status),
-        CreatedAt:       booking.CreatedAt.Format("2006-01-02 15:04:05"),
-        UpdatedAt:       booking.UpdatedAt.Format("2006-01-02 15:04:05"),
+// CancelBooking - Customer cancel their booking
+func (s *bookingService) CancelBooking(bookingID int, userID int, req dto.CancelBookingRequest) (*dto.CancelBookingResponse, error) {
+    booking, err := s.bookingRepo.FindByID(bookingID)
+    if err != nil {
+        if err == gorm.ErrRecordNotFound {
+            return nil, errs.NotFound("booking not found")
+        }
+        return nil, errs.InternalServerError("failed to fetch booking")
     }
 
+    // Authorization check
+    if booking.UserID != userID {
+        return nil, errs.Forbidden("you can only cancel your own bookings")
+    }
+
+    // Validation
+    if booking.Status == database.BookingStatusCancelled {
+        return nil, errs.BadRequest("booking is already cancelled")
+    }
+
+    if booking.Status == database.BookingStatusCompleted {
+        return nil, errs.BadRequest("cannot cancel completed booking")
+    }
+
+    // Update status
+    booking.Status = database.BookingStatusCancelled
+    booking.AdminNotes = fmt.Sprintf("Cancelled by customer. Reason: %s", req.Reason)
+
+    if err := s.bookingRepo.Update(booking); err != nil {
+        return nil, errs.InternalServerError("failed to cancel booking")
+    }
+
+    // Reload with relations
+    bookingWithRelations, err := s.bookingRepo.FindByIDWithRelations(bookingID)
+    if err != nil {
+        log.Printf("⚠️  Failed to reload booking: %v", err)
+    }
+
+    // Send email
+    go func() {
+        if err := s.emailService.SendBookingCancelled(bookingWithRelations, req.Reason); err != nil {
+            log.Printf("❌ [Email] Failed to send cancellation email: %v", err)
+        } else {
+            log.Printf("✅ [Email] Cancellation email sent for Booking #%d", bookingID)
+        }
+    }()
+
+    return &dto.CancelBookingResponse{
+        Success: true,
+        Message: "Booking cancelled successfully. Admin has been notified.",
+    }, nil
+}
+
+// ============= HELPER FUNCTIONS =============
+
+// mapBookingToDTO - Basic mapping (untuk list)
+func (s *bookingService) mapBookingToDTO(booking *database.Booking) dto.BookingData {
+    data := dto.BookingData{
+        ID:            booking.ID,
+        UserID:        booking.UserID,
+        StudioID:      booking.StudioID,
+        BookingDate:   booking.BookingDate.Format("2006-01-02"),
+        StartTime:     booking.StartTime.Format("15:04"),
+        EndTime:       booking.EndTime.Format("15:04"),
+        DurationHours: booking.DurationHours,
+        TotalPrice:    booking.TotalPrice,
+        Status:        string(booking.Status),
+        AdminNotes:    booking.AdminNotes,
+        CreatedAt:     booking.CreatedAt.Format("2006-01-02 15:04:05"),
+        UpdatedAt:     booking.UpdatedAt.Format("2006-01-02 15:04:05"),
+    }
+
+    // Include studio if loaded
     if booking.Studio != nil {
         data.Studio = &dto.StudioData{
             ID:             booking.Studio.ID,
@@ -422,6 +412,7 @@ func (s *bookingService) mapBookingToDTO(booking *database.Booking) dto.BookingD
             Location:       booking.Studio.Location,
             PricePerHour:   booking.Studio.PricePerHour,
             ImageURL:       booking.Studio.ImageURL,
+            Facilities:     booking.Studio.Facilities,
             OperatingHours: booking.Studio.OperatingHours,
         }
     }
@@ -429,10 +420,11 @@ func (s *bookingService) mapBookingToDTO(booking *database.Booking) dto.BookingD
     return data
 }
 
-// Helper: Map booking to DTO (with full relations)
+// mapBookingToDTOWithRelations - Full mapping with relations (untuk detail)
 func (s *bookingService) mapBookingToDTOWithRelations(booking *database.Booking) dto.BookingData {
     data := s.mapBookingToDTO(booking)
 
+    // Include user info (for admin view)
     if booking.User != nil {
         data.User = &dto.UserData{
             ID:    booking.User.ID,
@@ -442,36 +434,25 @@ func (s *bookingService) mapBookingToDTOWithRelations(booking *database.Booking)
         }
     }
 
-    if len(booking.Payments) > 0 {
-        data.Payments = make([]dto.PaymentData, len(booking.Payments))
-        for i, payment := range booking.Payments {
-            data.Payments[i] = dto.PaymentData{
-                ID:          payment.ID,
-                PaymentType: string(payment.PaymentType),
-                Amount:      payment.Amount,
-                Status:      string(payment.Status),
-            }
-
-            if payment.ProofURL != "" {
-                data.Payments[i].ProofURL = payment.ProofURL
-            }
-
-            if payment.PaidAt != nil {
-                data.Payments[i].PaidAt = payment.PaidAt.Format("2006-01-02 15:04:05")
-            }
-        }
-    }
-
-    if booking.Cancellation != nil {
-        data.Cancellation = &dto.CancellationData{
-            ID:           booking.Cancellation.ID,
-            BookingID:    booking.Cancellation.BookingID,
-            Reason:       booking.Cancellation.Reason,
-            RefundAmount: booking.Cancellation.RefundAmount,
-            RefundStatus: booking.Cancellation.RefundStatus,
-            CancelledAt:  booking.Cancellation.CancelledAt.Format("2006-01-02 15:04:05"),
-        }
-    }
-
     return data
+}
+
+// formatRupiah - Format number as Rupiah
+func formatRupiah(amount int) string {
+    if amount < 1000 {
+        return fmt.Sprintf("%d", amount)
+    }
+
+    str := fmt.Sprintf("%d", amount)
+    length := len(str)
+    result := ""
+
+    for i, char := range str {
+        if i > 0 && (length-i)%3 == 0 {
+            result += "."
+        }
+        result += string(char)
+    }
+
+    return result
 }

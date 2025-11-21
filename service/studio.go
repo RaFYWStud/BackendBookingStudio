@@ -300,3 +300,62 @@ func (s *studioService) DeleteStudio(studioID int) (*dto.DeleteStudioResponse, e
         Message: fmt.Sprintf("Studio with ID %d has been deleted successfully", studioID),
     }, nil
 }
+
+func (s *studioService) PatchStudio(studioID int, req dto.PatchStudioRequest) (*dto.PatchStudioResponse, error) {
+    // Find existing studio
+    studio, err := s.studioRepo.FindByID(studioID)
+    if err != nil {
+        if err == gorm.ErrRecordNotFound {
+            return nil, errs.NotFound("studio not found")
+        }
+        return nil, errs.InternalServerError("failed to fetch studio")
+    }
+
+    // Update only provided fields
+    if req.Name != nil {
+        studio.Name = *req.Name
+    }
+    if req.Description != nil {
+        studio.Description = *req.Description
+    }
+    if req.Location != nil {
+        studio.Location = *req.Location
+    }
+    if req.PricePerHour != nil {
+        studio.PricePerHour = *req.PricePerHour
+    }
+    if req.ImageURL != nil {
+        studio.ImageURL = *req.ImageURL
+    }
+    if len(req.Facilities) > 0 {
+        studio.Facilities = database.StringArray(req.Facilities)
+    }
+    if req.OperatingHours != nil {
+        studio.OperatingHours = *req.OperatingHours
+    }
+    if req.IsActive != nil {
+        studio.IsActive = *req.IsActive
+    }
+
+    if err := s.studioRepo.Update(studio); err != nil {
+        return nil, errs.InternalServerError("failed to update studio")
+    }
+
+    return &dto.PatchStudioResponse{
+        Success: true,
+        Message: "Studio updated successfully (partial update)",
+        Data: dto.StudioData{
+            ID:             studio.ID,
+            Name:           studio.Name,
+            Description:    studio.Description,
+            Location:       studio.Location,
+            PricePerHour:   studio.PricePerHour,
+            ImageURL:       studio.ImageURL,
+            Facilities:     studio.Facilities,
+            OperatingHours: studio.OperatingHours,
+            IsActive:       studio.IsActive,
+            CreatedAt:      studio.CreatedAt.Format("2006-01-02 15:04:05"),
+            UpdatedAt:      studio.UpdatedAt.Format("2006-01-02 15:04:05"),
+        },
+    }, nil
+}

@@ -13,9 +13,6 @@ func RunMigration(db *gorm.DB) error {
         &User{},
         &Studio{},
         &Booking{},
-        &PaymentMethod{},
-        &Payment{},
-        &Cancellation{},
     ); err != nil {
         return fmt.Errorf("gagal migrasi: %w", err)
     }

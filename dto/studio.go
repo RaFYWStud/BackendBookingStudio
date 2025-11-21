@@ -44,6 +44,18 @@ type CheckAvailabilityRequest struct {
     EndTime   string `json:"end_time" binding:"required"`   // Format: "17:00"
 }
 
+type PatchStudioRequest struct {
+    Name           *string  `json:"name,omitempty"`
+    Description    *string  `json:"description,omitempty"`
+    Location       *string  `json:"location,omitempty"`
+    PricePerHour   *int     `json:"price_per_hour,omitempty"`
+    ImageURL       *string  `json:"image_url,omitempty"`
+    Facilities     []string `json:"facilities,omitempty"`
+    OperatingHours *string  `json:"operating_hours,omitempty"`
+    IsActive       *bool    `json:"is_active,omitempty"`
+}
+
+
 // ============= RESPONSE DTOs =============
 
 // StudioResponse - Single studio detail
@@ -129,4 +141,10 @@ type UpdateStudioResponse struct {
 type DeleteStudioResponse struct {
     Success bool   `json:"success"`
     Message string `json:"message"`
+}
+
+type PatchStudioResponse struct {
+    Success bool       `json:"success"`
+    Message string     `json:"message"`
+    Data    StudioData `json:"data"`
 }

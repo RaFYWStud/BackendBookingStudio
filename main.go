@@ -71,9 +71,6 @@ func runReset() {
 
     fmt.Println("🗑️  Dropping all tables...")
     err = db.Migrator().DropTable(
-        &dbMigration.Cancellation{},
-        &dbMigration.Payment{},
-        &dbMigration.PaymentMethod{},
         &dbMigration.Booking{},
         &dbMigration.Studio{},
         &dbMigration.User{},
