@@ -9,8 +9,6 @@ func New(db *gorm.DB) *contract.Repository {
 	return &contract.Repository{
 		Auth: ImplAuthRepository(db),
 		Studio: ImplStudioRepository(db),
-		Booking: ImplBookingRepository(db),
-		PaymentMethod: ImplPaymentMethodRepository(db), 
-        Payment:       ImplPaymentRepository(db),      
+		Booking: ImplBookingRepository(db), 
 	}
 }

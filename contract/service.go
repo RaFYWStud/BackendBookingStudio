@@ -9,8 +9,6 @@ type Service struct {
     Auth          AuthService
     Studio        StudioService
     Booking       BookingService
-    PaymentMethod PaymentMethodService 
-    Payment       PaymentService    
     Email         EmailService   
 }
 
@@ -36,26 +34,6 @@ type BookingService interface {
     CancelBooking(bookingID int, userID int, req dto.CancelBookingRequest) (*dto.CancelBookingResponse, error)
     GetAllBookings(filter dto.BookingFilterRequest) (*dto.BookingListResponse, error)
     UpdateBookingStatus(bookingID int, req dto.UpdateBookingStatusRequest) (*dto.UpdateBookingStatusResponse, error)
-}
-
-type PaymentMethodService interface {
-    GetActivePaymentMethods() (*dto.PaymentMethodListResponse, error)
-
-    GetAllPaymentMethods() (*dto.PaymentMethodListResponse, error)
-    GetPaymentMethodByID(id int) (*dto.PaymentMethodResponse, error)
-    CreatePaymentMethod(req dto.CreatePaymentMethodRequest) (*dto.PaymentMethodResponse, error)
-    UpdatePaymentMethod(id int, req dto.UpdatePaymentMethodRequest) (*dto.PaymentMethodResponse, error)
-    DeletePaymentMethod(id int) (*dto.DeletePaymentMethodResponse, error)
-}
-
-type PaymentService interface {
-    UploadPaymentProof(userID int, bookingID int, req dto.UploadPaymentProofRequest) (*dto.UploadPaymentProofResponse, error)
-    GetMyPayments(userID int, filter dto.PaymentFilterRequest) (*dto.PaymentListResponse, error)
-    GetPaymentDetail(paymentID int, userID int, isAdmin bool) (*dto.PaymentResponse, error)
-    
-    GetAllPayments(filter dto.PaymentFilterRequest) (*dto.PaymentListResponse, error)
-    GetPendingPayments(filter dto.PaymentFilterRequest) (*dto.PaymentListResponse, error)
-    VerifyPayment(paymentID int, adminID int, req dto.VerifyPaymentRequest) (*dto.VerifyPaymentResponse, error)
 }
 
 type EmailService interface {

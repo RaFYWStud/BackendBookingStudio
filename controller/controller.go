@@ -28,8 +28,6 @@ func New(app *gin.Engine, service *contract.Service) {
 		&AuthController{},
 		&StudioController{},
 		&BookingController{},
-		&PaymentMethodController{},
-		&PaymentController{},
 		// Add your controller here
 	}
 
