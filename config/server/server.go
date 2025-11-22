@@ -15,6 +15,10 @@ import (
 	"github.com/RaFYWStud/BackendBookingStudio/repository"
 	"github.com/RaFYWStud/BackendBookingStudio/service"
 	"gorm.io/gorm"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "github.com/RaFYWStud/BackendBookingStudio/docs"
 )
 
 func Run() {
@@ -53,6 +57,9 @@ func startServer(cfg *config.AppConfigurationMap, db *gorm.DB) {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 	r.Static("/static", "./static")
+
+	// route Swagger UI
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Register routes
 	controller.New(r, serv)

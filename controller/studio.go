@@ -40,8 +40,24 @@ func (sc *StudioController) InitRoute(app *gin.RouterGroup) {
     }
 }
 
-// GetAllStudios - GET /api/studios
-// Query params: location, min_price, max_price, is_active, search, page, limit, sort_by
+// GetAllStudios godoc
+// @Summary      Ambil semua studio
+// @Description  Mengambil daftar semua studio dengan filter dan pagination
+// @Tags         Studios
+// @Accept       json
+// @Produce      json
+// @Param        location   query     string  false  "Filter lokasi"
+// @Param        min_price  query     int     false  "Harga minimal"
+// @Param        max_price  query     int     false  "Harga maksimal"
+// @Param        is_active  query     bool    false  "Hanya studio aktif"
+// @Param        search     query     string  false  "Cari berdasarkan nama"
+// @Param        page       query     int     false  "Halaman"                default(1)
+// @Param        limit      query     int     false  "Jumlah data per halaman" default(10)
+// @Param        sort_by    query     string  false  "Sortir (price_asc, price_desc, name_asc, name_desc)"
+// @Success      200        {object}  dto.StudioListResponse
+// @Failure      400        {object}  dto.ErrorResponse  "Invalid query parameters"
+// @Failure      500        {object}  dto.ErrorResponse  "Internal server error"
+// @Router       /studios [get]
 func (sc *StudioController) getAllStudios(ctx *gin.Context) {
     var filter dto.StudioFilterRequest
     if err := ctx.ShouldBindQuery(&filter); err != nil {
@@ -58,7 +74,18 @@ func (sc *StudioController) getAllStudios(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, response)
 }
 
-// GetStudioByID - GET /api/studios/:id
+// GetStudioByID godoc
+// @Summary      Ambil 1 studio berdasarkan ID
+// @Description  Mengambil detail studio berdasarkan ID
+// @Tags         Studios
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "ID Studio"
+// @Success      200  {object}  dto.StudioResponse
+// @Failure      400  {object}  dto.ErrorResponse  "Invalid studio ID"
+// @Failure      404  {object}  dto.ErrorResponse  "Studio not found"
+// @Failure      500  {object}  dto.ErrorResponse  "Internal server error"
+// @Router       /studios/{id} [get]
 func (sc *StudioController) getStudioByID(ctx *gin.Context) {
     idParam := ctx.Param("id")
     studioID, err := strconv.Atoi(idParam)
@@ -76,7 +103,18 @@ func (sc *StudioController) getStudioByID(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, response)
 }
 
-// CheckAvailability - POST /api/studios/:id/availability
+// CheckAvailability godoc
+// @Summary      Cek jadwal ketersediaan studio
+// @Description  Mengecek apakah studio tersedia pada waktu tertentu
+// @Tags         Studios
+// @Accept       json
+// @Produce      json
+// @Param        id       path   int                         true  "ID Studio"
+// @Param        payload  body   dto.CheckAvailabilityRequest true  "Data untuk pengecekan jadwal"
+// @Success      200      {object} dto.AvailabilityResponse
+// @Failure      400      {object} dto.ErrorResponse  "Invalid request payload / invalid studio ID"
+// @Failure      500      {object} dto.ErrorResponse  "Internal server error"
+// @Router       /studios/{id}/availability [post]
 func (sc *StudioController) checkAvailability(ctx *gin.Context) {
     idParam := ctx.Param("id")
     studioID, err := strconv.Atoi(idParam)
@@ -100,7 +138,20 @@ func (sc *StudioController) checkAvailability(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, response)
 }
 
-// CreateStudio - POST /api/studios (Admin Only)
+// CreateStudio godoc
+// @Summary      Buat studio baru (Admin Only)
+// @Description  Menambahkan studio baru oleh admin
+// @Tags         Studios
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        payload  body      dto.CreateStudioRequest  true  "Data studio baru"
+// @Success      201      {object}  dto.CreateStudioResponse
+// @Failure      400      {object}  dto.ErrorResponse  "Invalid request payload"
+// @Failure      401      {object}  dto.ErrorResponse  "Unauthorized"
+// @Failure      403      {object}  dto.ErrorResponse  "Forbidden (bukan admin)"
+// @Failure      500      {object}  dto.ErrorResponse  "Internal server error"
+// @Router       /studios [post]
 func (sc *StudioController) createStudio(ctx *gin.Context) {
     var payload dto.CreateStudioRequest
     if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -117,7 +168,22 @@ func (sc *StudioController) createStudio(ctx *gin.Context) {
     ctx.JSON(http.StatusCreated, response)
 }
 
-// UpdateStudio - PUT /api/studios/:id (Admin Only)
+// UpdateStudio godoc
+// @Summary      Update studio lengkap (Admin Only)
+// @Description  Mengupdate seluruh data studio
+// @Tags         Studios
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id       path      int                    true  "ID Studio"
+// @Param        payload  body      dto.UpdateStudioRequest true  "Data update studio"
+// @Success      200      {object}  dto.UpdateStudioResponse
+// @Failure      400      {object}  dto.ErrorResponse  "Invalid studio ID / payload"
+// @Failure      401      {object}  dto.ErrorResponse  "Unauthorized"
+// @Failure      403      {object}  dto.ErrorResponse  "Forbidden (bukan admin)"
+// @Failure      404      {object}  dto.ErrorResponse  "Studio not found"
+// @Failure      500      {object}  dto.ErrorResponse  "Internal server error"
+// @Router       /studios/{id} [put]
 func (sc *StudioController) updateStudio(ctx *gin.Context) {
     idParam := ctx.Param("id")
     studioID, err := strconv.Atoi(idParam)
@@ -141,7 +207,22 @@ func (sc *StudioController) updateStudio(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, response)
 }
 
-// PatchStudio - PATCH /studios/:id (Admin Only)
+// PatchStudio godoc
+// @Summary      Patch sebagian data studio (Admin Only)
+// @Description  Mengupdate sebagian field studio
+// @Tags         Studios
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id       path      int                   true  "ID Studio"
+// @Param        payload  body      dto.PatchStudioRequest true  "Data patch studio"
+// @Success      200      {object}  dto.PatchStudioResponse
+// @Failure      400      {object}  dto.ErrorResponse  "Invalid studio ID / payload"
+// @Failure      401      {object}  dto.ErrorResponse  "Unauthorized"
+// @Failure      403      {object}  dto.ErrorResponse  "Forbidden (bukan admin)"
+// @Failure      404      {object}  dto.ErrorResponse  "Studio not found"
+// @Failure      500      {object}  dto.ErrorResponse  "Internal server error"
+// @Router       /studios/{id} [patch]
 func (sc *StudioController) patchStudio(ctx *gin.Context) {
     idParam := ctx.Param("id")
     studioID, err := strconv.Atoi(idParam)
@@ -165,7 +246,21 @@ func (sc *StudioController) patchStudio(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, response)
 }
 
-// DeleteStudio - DELETE /api/studios/:id (Admin Only)
+// DeleteStudio godoc
+// @Summary      Hapus studio (Admin Only)
+// @Description  Menghapus studio berdasarkan ID
+// @Tags         Studios
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      int  true  "ID Studio"
+// @Success      200  {object}  dto.DeleteStudioResponse
+// @Failure      400  {object}  dto.ErrorResponse  "Invalid studio ID"
+// @Failure      401  {object}  dto.ErrorResponse  "Unauthorized"
+// @Failure      403  {object}  dto.ErrorResponse  "Forbidden (bukan admin)"
+// @Failure      404  {object}  dto.ErrorResponse  "Studio not found"
+// @Failure      500  {object}  dto.ErrorResponse  "Internal server error"
+// @Router       /studios/{id} [delete]
 func (sc *StudioController) deleteStudio(ctx *gin.Context) {
     idParam := ctx.Param("id")
     studioID, err := strconv.Atoi(idParam)

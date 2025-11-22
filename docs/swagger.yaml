@@ -1,0 +1,1051 @@
+basePath: /
+definitions:
+  dto.AvailabilityData:
+    properties:
+      available_slots:
+        items:
+          $ref: '#/definitions/dto.TimeSlot'
+        type: array
+      booked_slots:
+        items:
+          $ref: '#/definitions/dto.BookedSlot'
+        type: array
+      date:
+        type: string
+      studio_id:
+        type: integer
+    type: object
+  dto.AvailabilityResponse:
+    properties:
+      available:
+        type: boolean
+      data:
+        $ref: '#/definitions/dto.AvailabilityData'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.BookedSlot:
+    properties:
+      booking_id:
+        type: integer
+      end_time:
+        type: string
+      start_time:
+        type: string
+    type: object
+  dto.BookingData:
+    properties:
+      admin_notes:
+        type: string
+      booking_date:
+        type: string
+      created_at:
+        type: string
+      duration_hours:
+        type: integer
+      end_time:
+        type: string
+      id:
+        type: integer
+      start_time:
+        type: string
+      status:
+        type: string
+      studio:
+        $ref: '#/definitions/dto.StudioData'
+      studio_id:
+        type: integer
+      total_price:
+        type: integer
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/dto.UserData'
+      user_id:
+        type: integer
+    type: object
+  dto.BookingListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.BookingData'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  dto.BookingResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dto.BookingData'
+      success:
+        type: boolean
+    type: object
+  dto.CancelBookingRequest:
+    properties:
+      reason:
+        minLength: 10
+        type: string
+    required:
+    - reason
+    type: object
+  dto.CancelBookingResponse:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.CheckAvailabilityRequest:
+    properties:
+      date:
+        description: 'Format: "2025-11-20"'
+        type: string
+      end_time:
+        description: 'Format: "17:00"'
+        type: string
+      start_time:
+        description: 'Format: "14:00"'
+        type: string
+    required:
+    - date
+    - end_time
+    - start_time
+    type: object
+  dto.CreateBookingRequest:
+    properties:
+      booking_date:
+        description: YYYY-MM-DD
+        type: string
+      duration_hours:
+        type: integer
+      end_time:
+        description: HH:MM
+        type: string
+      start_time:
+        description: HH:MM
+        type: string
+      studio_id:
+        type: integer
+    required:
+    - booking_date
+    - end_time
+    - start_time
+    - studio_id
+    type: object
+  dto.CreateBookingResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dto.BookingData'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.CreateStudioRequest:
+    properties:
+      description:
+        type: string
+      facilities:
+        items:
+          type: string
+        type: array
+      image_url:
+        type: string
+      location:
+        type: string
+      name:
+        minLength: 3
+        type: string
+      operating_hours:
+        description: 'Format: "09:00-22:00"'
+        type: string
+      price_per_hour:
+        minimum: 10000
+        type: integer
+    required:
+    - description
+    - facilities
+    - image_url
+    - location
+    - name
+    - operating_hours
+    - price_per_hour
+    type: object
+  dto.CreateStudioResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dto.StudioData'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.DeleteStudioResponse:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.ErrorResponse:
+    properties:
+      code:
+        type: string
+      error:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.LoginData:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/dto.UserData'
+    type: object
+  dto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.LoginResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dto.LoginData'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.Pagination:
+    properties:
+      current_page:
+        type: integer
+      page_size:
+        type: integer
+      total_pages:
+        type: integer
+      total_records:
+        type: integer
+    type: object
+  dto.PaginationMeta:
+    properties:
+      current_page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  dto.PatchStudioRequest:
+    properties:
+      description:
+        type: string
+      facilities:
+        items:
+          type: string
+        type: array
+      image_url:
+        type: string
+      is_active:
+        type: boolean
+      location:
+        type: string
+      name:
+        type: string
+      operating_hours:
+        type: string
+      price_per_hour:
+        type: integer
+    type: object
+  dto.PatchStudioResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dto.StudioData'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.ProfileResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dto.UserData'
+      success:
+        type: boolean
+    type: object
+  dto.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        minLength: 2
+        type: string
+      password:
+        minLength: 6
+        type: string
+      password_confirmation:
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - password_confirmation
+    type: object
+  dto.RegisterResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dto.UserData'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.StudioData:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      facilities:
+        items:
+          type: string
+        type: array
+      id:
+        type: integer
+      image_url:
+        type: string
+      is_active:
+        type: boolean
+      location:
+        type: string
+      name:
+        type: string
+      operating_hours:
+        type: string
+      price_per_hour:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  dto.StudioListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.StudioData'
+        type: array
+      pagination:
+        $ref: '#/definitions/dto.Pagination'
+      success:
+        type: boolean
+    type: object
+  dto.StudioResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dto.StudioData'
+      success:
+        type: boolean
+    type: object
+  dto.TimeSlot:
+    properties:
+      end_time:
+        description: '"12:00"'
+        type: string
+      start_time:
+        description: '"09:00"'
+        type: string
+    type: object
+  dto.UpdateBookingStatusRequest:
+    properties:
+      admin_notes:
+        description: Catatan pembayaran/perubahan status
+        type: string
+      status:
+        enum:
+        - pending
+        - confirmed
+        - completed
+        - cancelled
+        type: string
+    required:
+    - status
+    type: object
+  dto.UpdateBookingStatusResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dto.BookingData'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.UpdateStudioRequest:
+    properties:
+      description:
+        type: string
+      facilities:
+        items:
+          type: string
+        type: array
+      image_url:
+        type: string
+      is_active:
+        type: boolean
+      location:
+        type: string
+      name:
+        minLength: 3
+        type: string
+      operating_hours:
+        type: string
+      price_per_hour:
+        minimum: 10000
+        type: integer
+    type: object
+  dto.UpdateStudioResponse:
+    properties:
+      data:
+        $ref: '#/definitions/dto.StudioData'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.UserData:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      role:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Dokumentasi API Backend Booking Studio
+  title: Backend Booking Studio API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login dengan email & password, mengembalikan JWT token
+      parameters:
+      - description: Data login user
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LoginResponse'
+        "400":
+          description: Invalid request payload / kredensial salah
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Login user
+      tags:
+      - Auth
+  /auth/profile:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil data profil user berdasarkan JWT token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProfileResponse'
+        "401":
+          description: Unauthorized / token invalid
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ambil profil user login
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 'Membuat akun baru (default role: customer)'
+      parameters:
+      - description: Data registrasi user
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.RegisterResponse'
+        "400":
+          description: Invalid request payload / validasi gagal
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Register user baru
+      tags:
+      - Auth
+  /bookings:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua booking milik user login
+      parameters:
+      - description: Filter status
+        in: query
+        name: status
+        type: string
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Jumlah per halaman
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BookingListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ambil riwayat booking user
+      tags:
+      - Bookings
+    post:
+      consumes:
+      - application/json
+      description: Customer membuat booking studio
+      parameters:
+      - description: Data booking
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateBookingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CreateBookingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buat booking baru
+      tags:
+      - Bookings
+  /bookings/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Customer/Admin bisa lihat detail booking
+      parameters:
+      - description: ID Booking
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BookingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ambil detail 1 booking
+      tags:
+      - Bookings
+  /bookings/{id}/cancel:
+    post:
+      consumes:
+      - application/json
+      description: Customer membatalkan booking yang masih aktif
+      parameters:
+      - description: ID Booking
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Alasan pembatalan
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CancelBookingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CancelBookingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batalkan booking
+      tags:
+      - Bookings
+  /bookings/admin:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua booking dengan filter
+      parameters:
+      - description: Filter status
+        in: query
+        name: status
+        type: string
+      - description: Halaman
+        in: query
+        name: page
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BookingListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ambil semua booking (Admin Only)
+      tags:
+      - Bookings
+  /bookings/admin/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Admin mengubah status booking
+      parameters:
+      - description: ID Booking
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Status baru
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateBookingStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UpdateBookingStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update status booking (Admin Only)
+      tags:
+      - Bookings
+  /studios:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil daftar semua studio dengan filter dan pagination
+      parameters:
+      - description: Filter lokasi
+        in: query
+        name: location
+        type: string
+      - description: Harga minimal
+        in: query
+        name: min_price
+        type: integer
+      - description: Harga maksimal
+        in: query
+        name: max_price
+        type: integer
+      - description: Hanya studio aktif
+        in: query
+        name: is_active
+        type: boolean
+      - description: Cari berdasarkan nama
+        in: query
+        name: search
+        type: string
+      - default: 1
+        description: Halaman
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Jumlah data per halaman
+        in: query
+        name: limit
+        type: integer
+      - description: Sortir (price_asc, price_desc, name_asc, name_desc)
+        in: query
+        name: sort_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StudioListResponse'
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Ambil semua studio
+      tags:
+      - Studios
+    post:
+      consumes:
+      - application/json
+      description: Menambahkan studio baru oleh admin
+      parameters:
+      - description: Data studio baru
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateStudioRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CreateStudioResponse'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden (bukan admin)
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buat studio baru (Admin Only)
+      tags:
+      - Studios
+  /studios/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Menghapus studio berdasarkan ID
+      parameters:
+      - description: ID Studio
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.DeleteStudioResponse'
+        "400":
+          description: Invalid studio ID
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden (bukan admin)
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Studio not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Hapus studio (Admin Only)
+      tags:
+      - Studios
+    get:
+      consumes:
+      - application/json
+      description: Mengambil detail studio berdasarkan ID
+      parameters:
+      - description: ID Studio
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StudioResponse'
+        "400":
+          description: Invalid studio ID
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Studio not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Ambil 1 studio berdasarkan ID
+      tags:
+      - Studios
+    patch:
+      consumes:
+      - application/json
+      description: Mengupdate sebagian field studio
+      parameters:
+      - description: ID Studio
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Data patch studio
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PatchStudioRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PatchStudioResponse'
+        "400":
+          description: Invalid studio ID / payload
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden (bukan admin)
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Studio not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Patch sebagian data studio (Admin Only)
+      tags:
+      - Studios
+    put:
+      consumes:
+      - application/json
+      description: Mengupdate seluruh data studio
+      parameters:
+      - description: ID Studio
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Data update studio
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateStudioRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UpdateStudioResponse'
+        "400":
+          description: Invalid studio ID / payload
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden (bukan admin)
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Studio not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update studio lengkap (Admin Only)
+      tags:
+      - Studios
+  /studios/{id}/availability:
+    post:
+      consumes:
+      - application/json
+      description: Mengecek apakah studio tersedia pada waktu tertentu
+      parameters:
+      - description: ID Studio
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Data untuk pengecekan jadwal
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CheckAvailabilityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AvailabilityResponse'
+        "400":
+          description: Invalid request payload / invalid studio ID
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Cek jadwal ketersediaan studio
+      tags:
+      - Studios
+swagger: "2.0"
