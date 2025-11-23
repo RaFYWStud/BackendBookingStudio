@@ -58,8 +58,12 @@ func startServer(cfg *config.AppConfigurationMap, db *gorm.DB) {
 	r.Use(gin.Recovery())
 	r.Static("/static", "./static")
 
-	// route Swagger UI
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Swagger dengan Basic Auth
+	swaggerGroup := r.Group("/swagger")
+	swaggerGroup.Use(middleware.BasicAuthForSwagger())
+	{
+	swaggerGroup.GET("/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	// Register routes
 	controller.New(r, serv)
